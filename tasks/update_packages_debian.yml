@@ -54,6 +54,7 @@
 - name: "[Debian] Cleanup"
   ansible.builtin.apt:
     autoremove: true
+    autoclean: true
 
 - name: "[Debian] Unhold packages"
   ansible.builtin.dpkg_selections:
