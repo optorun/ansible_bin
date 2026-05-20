@@ -22,20 +22,38 @@
     state: latest
   register: _ansible_bin_packages_update_output
 
-- name: "[INFO] [Debian] Print installed/updated packages"
+- name: "[Debian] Parse updated packages (check mode)"
+  ansible.builtin.set_fact:
+    _updated_packages: >-
+      {{
+        _ansible_bin_packages_update_output.stdout_lines|d()
+        | select('match', '^Inst ')
+        | map('regex_replace', '^Inst (\S+) \[([^\]]+)\] \((\S+).*', '\1: \2 -> \3')
+        | list
+      }}
+  when: ansible_check_mode
+
+- name: "[Debian] Parse updated packages (normal mode)"
+  ansible.builtin.set_fact:
+    _updated_packages: >-
+      {{
+        _ansible_bin_packages_update_output.stdout_lines|d()
+        | select('match', '^Unpacking ')
+        | map('regex_replace', '^Unpacking (\S+) \(([^)]+)\) over \(([^)]+)\).*', '\1: \3 -> \2')
+        | list
+      }}
+  when: not ansible_check_mode
+
+- name: "[INFO] [Debian] Print updated packages"
   ansible.builtin.debug:
-    var: _ansible_bin_packages_update_output.stdout_lines|d()
-  when: _ansible_bin_packages_update_output.skipped is not defined
+    msg: "{{ _updated_packages }}"
+  when:
+    - _ansible_bin_packages_update_output.changed
+    - _updated_packages | length > 0
 
 - name: "[Debian] Cleanup"
   ansible.builtin.apt:
     autoremove: true
-  register: _ansible_bin_packages_cleanup_output
-
-- name: "[INFO] [Debian] Print removed packages"
-  ansible.builtin.debug:
-    var: _ansible_bin_packages_cleanup_output.stdout_lines|d()
-  when: _ansible_bin_packages_cleanup_output.skipped is not defined
 
 - name: "[Debian] Unhold packages"
   ansible.builtin.dpkg_selections:
