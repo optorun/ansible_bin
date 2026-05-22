@@ -5,6 +5,8 @@
 
 - name: "[INCLUDE] Include tasks \"setup_base_packages_<linux_distribution>.yml\""
   ansible.builtin.include_tasks: "setup_base_packages_{{ ansible_os_family|d('Debian')|lower }}.yml"
+  when: ansible_os_family in ['Debian', 'RedHat']
 
 - name: "[INCLUDE] Include tasks \"update_packages_<linux_distribution>.yml\""
   ansible.builtin.include_tasks: "update_packages_{{ ansible_os_family|d('Debian')|lower }}.yml"
+  when: ansible_os_family in ['Debian', 'RedHat']
