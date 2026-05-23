@@ -1,0 +1,4 @@
+---
+
+# Not implemented yet
+# This file is a placeholder to avoid errors when applying the role on RHEL hosts (because of include_tasks resolving dynamically the path for a non existing file)
