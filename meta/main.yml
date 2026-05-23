@@ -1,7 +1,8 @@
 ---
 
 galaxy_info:
-  role_name: ansible-bin
+  role_name: ansible_bin
+  namespace: ptn
   author: Pierre TOURON
   description: Manage binaries and scripts install, update, download, ...
 
