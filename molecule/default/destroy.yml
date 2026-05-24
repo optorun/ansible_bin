@@ -1,0 +1,16 @@
+---
+
+- name: Destroy testing containers
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Delete testing containers
+      community.docker.docker_container:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ groups['testing'] }}"
+
+    - name: Delete testing network
+      community.docker.docker_network:
+        name: br_testing-default
+        state: absent

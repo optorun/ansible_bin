@@ -1,0 +1,40 @@
+---
+
+ansible:
+  executor:
+    backend: ansible-playbook
+    args:
+      ansible_playbook:
+        - --inventory=inventory/
+        - --diff
+  env:
+    ANSIBLE_STDOUT_CALLBACK: ansible.builtin.default
+    ANSIBLE_RESULT_FORMAT: yaml
+    ANSIBLE_CALLBACKS_ENABLED: profile_tasks
+    ANSIBLE_FORCE_COLOR: "true"
+    ANSIBLE_DUPLICATE_YAML_DICT_KEY: ignore
+    ANSIBLE_HOST_KEY_CHECKING: "false"
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    create: create.yml
+    converge: converge.yml
+    verify: verify.yml
+    destroy: destroy.yml
+
+scenario:
+  test_sequence:
+    - create
+    - converge
+    - verify
+    - destroy
+  converge_sequence:
+    - create
+    - converge
+    - verify
+  destroy_sequence:
+    - destroy
+
+shared_state: false
+
+verifier:
+  name: ansible

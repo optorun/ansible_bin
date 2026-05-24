@@ -1,0 +1,53 @@
+---
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  pre_tasks:
+    - name: Gather necessary facts and/or variables
+      ansible.builtin.setup:
+        filter:
+          - ansible_env
+          - ansible_os_family
+
+  tasks:
+    - name: Verify apt custom repositories are configured
+      ansible.builtin.stat:
+        path: "/etc/apt/sources.list.d/{{ item.repoName }}.list"
+      loop: "{{ ansible_bin_apt_custom_repositories_common | d([]) + ansible_bin_apt_custom_repositories | d([]) }}"
+      register: _tests_apt_repo_files
+      when: ansible_os_family == 'Debian'
+
+    - name: Assert apt custom repositories are present
+      ansible.builtin.assert:
+        that: item.stat.exists
+        fail_msg: "Repository file for '{{ item.item.repoName }}' is missing"
+        success_msg: "Repository file for '{{ item.item.repoName }}' is present"
+        quiet: true
+      loop: "{{ _tests_apt_repo_files.results }}"
+      when: ansible_os_family == 'Debian'
+
+    - name: Verify packages are installed
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert packages are installed
+      ansible.builtin.assert:
+        that: item in ansible_facts.packages
+        fail_msg: "Package '{{ item }}' is not installed"
+        success_msg: "Package '{{ item }}' is installed"
+        quiet: true
+      loop: >-
+        {{ (ansible_bin_apt_packages_common | d([]) + ansible_bin_apt_packages | d([]))
+        if ansible_os_family == 'Debian'
+        else (ansible_bin_dnf_packages_common | d([]) + ansible_bin_dnf_packages | d([]))  }}
+
+    - name: Print results with cowsay
+      ansible.builtin.command: cowsay "All tests passed on {{ inventory_hostname }} !"
+      changed_when: false
+      environment:
+        PATH: "/usr/games:{{ ansible_env.PATH }}"
+      register: _tests_result_output
+
+    - debug:
+        msg: "{{ _tests_result_output.stdout_lines }}"

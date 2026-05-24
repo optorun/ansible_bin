@@ -1,0 +1,14 @@
+---
+
+all:
+  children:
+    testing:
+      hosts:
+        test_default_ansible_bin_debian:
+          ansible_connection: community.docker.docker
+          image: ptouron/ansible-molecule:debian12
+          privileged: true
+        test_default_ansible_bin_almalinux:
+          ansible_connection: community.docker.docker
+          image: ptouron/ansible-molecule:almalinux9
+          privileged: true

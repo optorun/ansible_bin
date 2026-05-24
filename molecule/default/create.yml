@@ -1,0 +1,31 @@
+---
+
+- name: Create testing instances
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "Ensure 'testing' group exists"
+      ansible.builtin.assert:
+        that: groups['testing'] | length > 0
+        fail_msg: "No hosts found in 'testing' group"
+
+    - name: Create testing network
+      community.docker.docker_network:
+        name: br_testing-default
+        driver: bridge
+        state: present
+
+    - name: Create testing containers
+      community.docker.docker_container:
+        name: "{{ item }}"
+        image: "{{ hostvars[item]['image'] }}"
+        state: started
+        networks:
+          - name: br_testing-default
+        privileged: "{{ hostvars[item]['privileged'] | d(false) }}"
+      loop: "{{ groups['testing'] }}"
+
+    - name: Check containers are online
+      ansible.builtin.command: uname -a
+      changed_when: false
+      loop: "{{ groups['testing'] }}"

@@ -1,0 +1,7 @@
+---
+
+ansible_bin_apt_packages_common:
+  - cowsay
+
+ansible_bin_dnf_packages_common:
+  - cowsay

@@ -1,0 +1,15 @@
+---
+
+ansible_bin_apt_custom_repositories:
+  - repoName: docker
+    repoBaseUrl: https://download.docker.com/linux/debian
+    repoDistributionRelease: bookworm
+    repoComponents: stable
+    signingKeyUrl: https://download.docker.com/linux/debian/gpg
+    signingKeyHash: sha256:1500c1f56fa9e26b9b8f42452a553675796ade0807cdce11975eb98170b3a570
+    signingKeyIsArmored: true
+
+ansible_bin_apt_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
