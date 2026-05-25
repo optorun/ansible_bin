@@ -14,7 +14,7 @@
     components: "{{ item.repoComponents|d(omit) }}"
     architectures: "{{ item.repoArchitecture|d(['amd64']) }}"
     signed_by: "{{ item.repoSigningKey|d(omit) }}"
-    trusted: "{{ item.trusted|bool|d(omit) }}"
+    trusted: "{{ item.repoIsTrusted|bool|d(omit) }}"
     mode: 0644
     state: present
   loop: "{{ ansible_bin_apt_custom_repositories_common|d([]) + ansible_bin_apt_custom_repositories|d([]) }}"
