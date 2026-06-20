@@ -1,0 +1,6 @@
+---
+
+- name: Install flatpak packages
+  community.general.flatpak:
+    name: "{{ ansible_bin_flatpak_packages_common|d([]) + ansible_bin_flatpak_packages|d([]) | list }}"
+    state: present

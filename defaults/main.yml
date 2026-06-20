@@ -12,4 +12,10 @@ ansible_bin_apt_packages: []
 ansible_bin_packages_versionlock_common: []
 ansible_bin_packages_versionlock: []
 
+ansible_bin_flatpak_custom_repositories_common: []
+ansible_bin_flatpak_custom_repositories: []
+
+ansible_bin_flatpak_packages_common: []
+ansible_bin_flatpak_packages: []
+
 ansible_bin_autoreboot: false

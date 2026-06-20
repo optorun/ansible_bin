@@ -189,3 +189,77 @@ argument_specs:
         type: bool
         required: false
         default: false
+
+      ansible_bin_flatpak_custom_repositories_common:
+        description: |
+          List of custom flatpak remotes that must be present on managed nodes
+          There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
+          This one is intended to be the common list
+        type: list
+        elements: dict
+        required: false
+        default:
+          - repoName: flathub
+            repoUrl: https://dl.flathub.org/repo/flathub.flatpakrepo
+            repoInstallMethod: user
+        options:
+          repoName:
+            description: Repository (remote) name. doesn't need to match anything
+            type: str
+            required: true
+          repoUrl:
+            description: Repository (remote) URL
+            type: str
+            required: true
+          repoInstallMethod:
+            description: Whether repository (remote) is installed globally (system) or only for the current user
+            type: str
+            required: false
+            default: user
+
+      ansible_bin_flatpak_custom_repositories:
+        description: |
+          List of custom flatpak remotes that must be present on managed nodes
+          There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
+          This one is intended to be a more specific list
+        type: list
+        elements: dict
+        required: false
+        default:
+          - repoName: flathub
+            repoUrl: https://dl.flathub.org/repo/flathub.flatpakrepo
+            repoInstallMethod: user
+        options:
+          repoName:
+            description: Repository (remote) name. doesn't need to match anything
+            type: str
+            required: true
+          repoUrl:
+            description: Repository (remote) URL
+            type: str
+            required: true
+          repoInstallMethod:
+            description: Whether repository (remote) is installed globally (system) or only for the current user
+            type: str
+            required: false
+            default: user
+
+      ansible_bin_flatpak_packages_common:
+        description: |
+          List of flatpak packages that must be present on managed nodes
+          There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
+          This one is intended to be the common list
+        type: list
+        elements: str
+        required: false
+        default: []
+
+      ansible_bin_flatpak_packages:
+        description: |
+          List of flatpak packages that must be present on managed nodes
+          There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
+          This one is intended to be a more specific list
+        type: list
+        elements: str
+        required: false
+        default: []

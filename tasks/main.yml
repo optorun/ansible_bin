@@ -16,3 +16,14 @@
   when: ansible_os_family in ['Debian', 'RedHat']
   tags:
     - never
+
+- name: "[IMPORT] Import tasks \"setup_custom_repositories_flatpak.yml\""
+  ansible.builtin.import_tasks: setup_custom_repositories_flatpak.yml
+
+- name: "[IMPORT] Include tasks \"setup_base_packages_flatpak.yml\""
+  ansible.builtin.import_tasks: setup_base_packages_flatpak.yml
+
+- name: "[IMPORT] Include tasks \"update_packages_flatpak.yml\""
+  ansible.builtin.import_tasks: update_packages_flatpak.yml
+  tags:
+    - never
