@@ -3,7 +3,7 @@
 - name: "[IMPORT] Import tasks \"gather_facts_subset.yml\""
   ansible.builtin.import_tasks: gather_facts_subset.yml
 
-- name: "[INCLUDE] Import tasks \"setup_custom_repositories_.<linux_distribution>yml\""
+- name: "[INCLUDE] Import tasks \"setup_custom_repositories_<linux_distribution>.yml\""
   ansible.builtin.include_tasks: "setup_custom_repositories_{{ ansible_os_family|d('Debian')|lower }}.yml"
   when: ansible_os_family in ['Debian', 'RedHat']
 
