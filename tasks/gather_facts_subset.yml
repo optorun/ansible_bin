@@ -5,6 +5,12 @@
     filter:
       - ansible_os_family
 
+- name: "[Debian] Ensure python3-debian is present" # Needed to detect which package manager to use on Debian, as well as for deb822_repository module
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+  when: ansible_os_family in ['Debian']
+
 - name: Gather packages facts
   ansible.builtin.package_facts:
     manager: auto
