@@ -33,7 +33,7 @@
       ansible.builtin.package_facts:
         manager: auto
 
-    - name: Assert packages are installed
+    - name: Assert system packages are installed
       ansible.builtin.assert:
         that: item in ansible_facts.packages
         fail_msg: "Package '{{ item }}' is not installed"
@@ -42,7 +42,24 @@
       loop: >-
         {{ (ansible_bin_apt_packages_common | d([]) + ansible_bin_apt_packages | d([]))
         if ansible_os_family == 'Debian'
-        else (ansible_bin_dnf_packages_common | d([]) + ansible_bin_dnf_packages | d([]))  }}
+        else (ansible_bin_dnf_packages_common | d([]) + ansible_bin_dnf_packages | d([]))
+        if ansible_os_family == 'RedHat'
+        }}
+
+    - name: Get installed flatpak packages
+      ansible.builtin.command:
+        cmd: flatpak list --app --columns=application
+      register: _tests_flatpak_packages
+      changed_when: false
+      check_mode: false
+
+    - name: Assert flatpak packages are installed
+      ansible.builtin.assert:
+        that: item.pkgId in _tests_flatpak_packages.stdout_lines
+        fail_msg: "Flatpak package '{{ item.pkgId }}' is not installed"
+        success_msg: "Flatpak package '{{ item.pkgId }}' is installed"
+        quiet: true
+      loop: "{{ ansible_bin_flatpak_packages_common | d([]) + ansible_bin_flatpak_packages | d([]) }}"
 
     - name: Print results with cowsay
       ansible.builtin.command: cowsay "All tests passed on {{ inventory_hostname }} !"

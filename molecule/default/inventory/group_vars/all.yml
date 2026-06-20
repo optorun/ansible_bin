@@ -3,6 +3,11 @@
 ansible_bin_apt_packages_common:
   - ca-certificates
   - cowsay
+  - flatpak
 
 ansible_bin_dnf_packages_common:
   - cowsay
+  - flatpak
+
+ansible_bin_flatpak_packages_common:
+  - pkgId: org.mozilla.firefox
