@@ -2,5 +2,7 @@
 
 - name: Install flatpak packages
   community.general.flatpak:
-    name: "{{ ansible_bin_flatpak_packages_common|d([]) + ansible_bin_flatpak_packages|d([]) | list }}"
+    name: "{{ item.pkgId }}"
+    method: "{{ item.pkgInstallMethod|d('user') }}"
     state: present
+  loop: "{{ ansible_bin_flatpak_packages_common|d([]) + ansible_bin_flatpak_packages|d([]) }}"

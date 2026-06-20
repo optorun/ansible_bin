@@ -225,10 +225,7 @@ argument_specs:
         type: list
         elements: dict
         required: false
-        default:
-          - repoName: flathub
-            repoUrl: https://dl.flathub.org/repo/flathub.flatpakrepo
-            repoInstallMethod: user
+        default: []
         options:
           repoName:
             description: Repository (remote) name. doesn't need to match anything
@@ -250,9 +247,19 @@ argument_specs:
           There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
           This one is intended to be the common list
         type: list
-        elements: str
+        elements: dict
         required: false
         default: []
+        options:
+          pkgId:
+            description: Flatpak package ID
+            type: str
+            required: true
+          pkgInstallMethod:
+            description: Whether package is installed globally (system) or only for the current user
+            type: str
+            required: false
+            default: user
 
       ansible_bin_flatpak_packages:
         description: |
@@ -260,6 +267,16 @@ argument_specs:
           There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
           This one is intended to be a more specific list
         type: list
-        elements: str
+        elements: dict
         required: false
         default: []
+        options:
+          pkgId:
+            description: Flatpak package ID
+            type: str
+            required: true
+          pkgInstallMethod:
+            description: Whether package is installed globally (system) or only for the current user
+            type: str
+            required: false
+            default: user
