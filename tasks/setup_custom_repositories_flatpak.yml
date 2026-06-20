@@ -2,8 +2,8 @@
 
 - name: Add flatpak custom remotes
   community.general.flatpak_remote:
-    name: "{{ item.repoName|d('flathub') }}"
-    flatpakrepo_url: "{{ item.repoUrl|d('https://dl.flathub.org/repo/flathub.flatpakrepo') }}"
+    name: "{{ item.repoName }}"
+    flatpakrepo_url: "{{ item.repoUrl }}"
     method: "{{ item.repoInstallMethod|d('user') }}"
     state: present
   loop: "{{ ansible_bin_flatpak_custom_repositories_common|d([]) + ansible_bin_flatpak_custom_repositories|d([]) }}"
