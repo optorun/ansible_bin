@@ -2,28 +2,68 @@
 
 - name: "[IMPORT] Import tasks \"gather_facts_subset.yml\""
   ansible.builtin.import_tasks: gather_facts_subset.yml
+  tags:
+    - always
 
-- name: "[INCLUDE] Import tasks \"setup_custom_repositories_<linux_distribution>.yml\""
-  ansible.builtin.include_tasks: "setup_custom_repositories_{{ ansible_os_family|d('Debian')|lower }}.yml"
-  when: ansible_os_family in ['Debian', 'RedHat']
+- name: Group system packages related tasks
+  block:
+    - name: "[INCLUDE] Include tasks \"setup_custom_repositories_<linux_distribution>.yml\""
+      ansible.builtin.include_tasks:
+        file: "setup_custom_repositories_{{ ansible_os_family|d('Debian')|lower }}.yml"
+        apply: # Even though included_tasks effectively inherit tags from blocks, they shouldn't (see https://github.com/ansible/ansible/issues/84127). So I'll keep the extra apply here just in case
+          tags:
+            - apt
+            - dnf
+            - install
+      tags:
+        - install
 
-- name: "[INCLUDE] Include tasks \"setup_base_packages_<linux_distribution>.yml\""
-  ansible.builtin.include_tasks: "setup_base_packages_{{ ansible_os_family|d('Debian')|lower }}.yml"
-  when: ansible_os_family in ['Debian', 'RedHat']
+    - name: "[INCLUDE] Include tasks \"setup_base_packages_<linux_distribution>.yml\""
+      ansible.builtin.include_tasks:
+        file: "setup_base_packages_{{ ansible_os_family|d('Debian')|lower }}.yml"
+        apply:
+          tags:
+            - apt
+            - dnf
+            - install
+      tags:
+        - install
 
-- name: "[INCLUDE] Include tasks \"update_packages_<linux_distribution>.yml\""
-  ansible.builtin.include_tasks: "update_packages_{{ ansible_os_family|d('Debian')|lower }}.yml"
+    - name: "[INCLUDE] Include tasks \"update_packages_<linux_distribution>.yml\""
+      ansible.builtin.include_tasks:
+        file: "update_packages_{{ ansible_os_family|d('Debian')|lower }}.yml"
+        apply:
+          tags:
+            - apt
+            - dnf
+            - update
+      tags:
+        - update
+        - never
+
   when: ansible_os_family in ['Debian', 'RedHat']
   tags:
-    - never
+    - apt
+    - dnf
 
-- name: "[IMPORT] Import tasks \"setup_custom_repositories_flatpak.yml\""
-  ansible.builtin.import_tasks: setup_custom_repositories_flatpak.yml
+- name: Group flatpak packages related tasks
+  block:
+    - name: "[IMPORT] Import tasks \"setup_custom_repositories_flatpak.yml\""
+      ansible.builtin.import_tasks: setup_custom_repositories_flatpak.yml
+      tags:
+        - install
 
-- name: "[IMPORT] Include tasks \"setup_base_packages_flatpak.yml\""
-  ansible.builtin.import_tasks: setup_base_packages_flatpak.yml
+    - name: "[IMPORT] Include tasks \"setup_base_packages_flatpak.yml\""
+      ansible.builtin.import_tasks: setup_base_packages_flatpak.yml
+      tags:
+        - install
 
-- name: "[IMPORT] Include tasks \"update_packages_flatpak.yml\""
-  ansible.builtin.import_tasks: update_packages_flatpak.yml
+    - name: "[IMPORT] Include tasks \"update_packages_flatpak.yml\""
+      ansible.builtin.import_tasks: update_packages_flatpak.yml
+      tags:
+        - update
+        - never
+
+  when: "'flatpak' in ansible_facts.packages"
   tags:
-    - never
+    - flatpak

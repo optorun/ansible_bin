@@ -4,3 +4,7 @@
   ansible.builtin.setup:
     filter:
       - ansible_os_family
+
+- name: Gather packages facts
+  ansible.builtin.package_facts:
+    manager: auto
