@@ -3,7 +3,17 @@
 - name: "[IMPORT] Import tasks \"gather_facts_subset.yml\""
   ansible.builtin.import_tasks: gather_facts_subset.yml
   tags:
-    - always
+    - apt
+    - dnf
+    - flatpak
+    - install
+    - update
+    - apt+install
+    - dnf+install
+    - apt+update
+    - dnf+update
+    - flatpak+install
+    - flatpak+update
 
 - name: Group system packages related tasks
   block:
@@ -15,8 +25,12 @@
             - apt
             - dnf
             - install
+            - apt+install
+            - dnf+install
       tags:
         - install
+        - apt+install
+        - dnf+install
 
     - name: "[INCLUDE] Include tasks \"setup_base_packages_<linux_distribution>.yml\""
       ansible.builtin.include_tasks:
@@ -26,8 +40,12 @@
             - apt
             - dnf
             - install
+            - apt+install
+            - dnf+install
       tags:
         - install
+        - apt+install
+        - dnf+install
 
     - name: "[INCLUDE] Include tasks \"update_packages_<linux_distribution>.yml\""
       ansible.builtin.include_tasks:
@@ -37,8 +55,12 @@
             - apt
             - dnf
             - update
+            - apt+update
+            - dnf+update
       tags:
         - update
+        - apt+update
+        - dnf+update
         - never
 
   when: ansible_os_family in ['Debian', 'RedHat']
@@ -52,16 +74,19 @@
       ansible.builtin.import_tasks: setup_custom_repositories_flatpak.yml
       tags:
         - install
+        - flatpak+install
 
     - name: "[IMPORT] Include tasks \"setup_base_packages_flatpak.yml\""
       ansible.builtin.import_tasks: setup_base_packages_flatpak.yml
       tags:
         - install
+        - flatpak+install
 
     - name: "[IMPORT] Include tasks \"update_packages_flatpak.yml\""
       ansible.builtin.import_tasks: update_packages_flatpak.yml
       tags:
         - update
+        - flatpak+update
         - never
 
   when: "'flatpak' in ansible_facts.packages"
