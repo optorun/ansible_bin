@@ -21,6 +21,10 @@ ansible_bin_flatpak_custom_repositories: []
 ansible_bin_flatpak_packages_common: []
 ansible_bin_flatpak_packages: []
 
+# Standalone binaries
+ansible_bin_binaries_packages_common: []
+ansible_bin_binaries_packages: []
+
 # Common
 ansible_bin_packages_versionlock_common: []
 ansible_bin_packages_versionlock: []
