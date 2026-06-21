@@ -5,8 +5,8 @@ argument_specs:
     short_description: Manage binaries and scripts install, update, download, ...
     description:
       - Setup custom APT repositories (Debian systems only)
-      - Install base packages list (Debian and RHEL-based systems)
-      - Provides tasks to upgrade packages on manages systems, supporting an exclusion list (Debian and RHEL-based systems)
+      - Install base packages list (Debian / RHEL-based systems and flatpak)
+      - Provides tasks to upgrade packages on manages systems, supporting an exclusion list (Debian / RHEL-based systems and flatpak)
 
     options:
       ansible_bin_apt_custom_repositories_common:
