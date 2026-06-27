@@ -1,17 +1,17 @@
 ---
 
+# APT
 ansible_bin_apt_custom_repositories_common: []
 ansible_bin_apt_custom_repositories: []
-
-ansible_bin_dnf_packages_common: []
-ansible_bin_dnf_packages: []
 
 ansible_bin_apt_packages_common: []
 ansible_bin_apt_packages: []
 
-ansible_bin_packages_versionlock_common: []
-ansible_bin_packages_versionlock: []
+# DNF
+ansible_bin_dnf_packages_common: []
+ansible_bin_dnf_packages: []
 
+# Flatpak
 ansible_bin_flatpak_custom_repositories_common:
   - repoName: flathub
     repoUrl: https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -20,5 +20,13 @@ ansible_bin_flatpak_custom_repositories: []
 
 ansible_bin_flatpak_packages_common: []
 ansible_bin_flatpak_packages: []
+
+# Standalone binaries
+ansible_bin_binaries_packages_common: []
+ansible_bin_binaries_packages: []
+
+# Common
+ansible_bin_packages_versionlock_common: []
+ansible_bin_packages_versionlock: []
 
 ansible_bin_autoreboot: false

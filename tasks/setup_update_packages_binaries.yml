@@ -1,0 +1,62 @@
+---
+
+# Regen la doc
+# Utiliser la var pkgName pour build le chemin par défaut plutôt que d'extraire la dernière partie de l'URL, si déjà la var est dispo, ...
+# Prévoir le check mode, qui ne doit notamment pas modifier le fichier matrix
+
+# Flow:
+# - Compare version cible avec version installée -> Lit la version dans un fichier json / yaml écrit au préalable, via slurp. Attention aux race conditions
+# - Si nouvelle version
+#     - dl le fichier dans /tmp
+#     - Créer le folder parent
+# - Stat le fichier pour récup son type mime
+# - Si type:
+#   - application/x-executable -> Le déplacer dans pkgDestPath/<nom du fichier> # Ajouter un param pkgName pour renommer le fichier ?
+#   - application/zip ou application/gzip -> Le désarchiver (sélectionner si possible uniquement les fichiers voulus) directement (ou le déplacer après coup) les fichiers dans pkgDestPath/<nom du fichier>
+#   - application/vnd.debian.binary-package -> L'installer via apt
+# - Ecrire la version du binaire installé dans un fichier (replace)
+# - Cleanup fichier temp
+
+#- name: Check standalone binaries installed versions
+
+- name: Ensure standalone binaries destination paths exists
+  ansible.builtin.file:
+    path: "{{ (item.pkgDestPath | dirname | d(ansible_env.HOME ~ '/.local/bin')) | expanduser }}"
+    state: directory
+  loop: "{{ ansible_bin_binaries_packages_common|d([]) + ansible_bin_binaries_packages|d([]) }}"
+
+- name: Download standalone binaries
+  ansible.builtin.get_url:
+    url: "{{ item.pkgUrl }}"
+    checksum: "{{ item.pkgChecksum | d(omit) }}"
+    dest: "{{ '/tmp/' ~ (item.pkgUrl | basename ) }}"
+#    dest: "{{ (item.pkgDestPath | d(ansible_env.HOME ~ '/.local/bin/' ~ (item.pkgUrl | basename ))) | expanduser }}"
+    owner: "{{ ansible_env.USER }}"
+    mode: 0754
+    force: true
+  loop: "{{ ansible_bin_binaries_packages_common|d([]) + ansible_bin_binaries_packages|d([]) }}"
+
+#- name: Move downloaded file accordingly
+#    dest: "{{ (item.pkgDestPath | d(ansible_env.HOME ~ '/.local/bin/' ~ (item.pkgUrl | basename ))) | expanduser }}"
+
+#- name: Unarchive a file that is already on the remote machine
+#  ansible.builtin.unarchive:
+#    src: /tmp/foo.zip
+#    dest: /usr/local/bin
+#    remote_src: yes
+
+#- name: Install standalone binaries
+
+#- name: Stat the file
+#  ansible.builtin.stat:
+#    path: "{{ filename }}"
+#    mime: true
+#  register: file_info
+#
+#- name: Show type info
+#  ansible.builtin.debug:
+#    msg:
+#      - "MIME type : {{ file_info.stat.mimetype }}"
+#      - "Is directory: {{ file_info.stat.isdir }}"
+#      - "Is symlink  : {{ file_info.stat.islnk }}"
+#      - "Is regular  : {{ file_info.stat.isreg }}"

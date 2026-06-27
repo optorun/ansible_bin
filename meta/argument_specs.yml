@@ -5,8 +5,9 @@ argument_specs:
     short_description: Manage binaries and scripts install, update, download, ...
     description:
       - Setup custom APT repositories (Debian systems only)
-      - Install base packages list (Debian and RHEL-based systems)
-      - Provides tasks to upgrade packages on manages systems, supporting an exclusion list (Debian and RHEL-based systems)
+      - Install base packages list (Debian / RHEL-based systems and flatpak)
+      - Provides tasks to upgrade packages on manages systems, supporting an exclusion list (Debian / RHEL-based systems and flatpak)
+      - Downloads standalone binaries (ready to go, archived or .deb files) and install them locally
 
     options:
       ansible_bin_apt_custom_repositories_common:
@@ -280,3 +281,87 @@ argument_specs:
             type: str
             required: false
             default: user
+
+      ansible_bin_binaries_packages_common:
+        description: |
+          List of standalone binaries that must be present on managed nodes
+          There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
+          This one is intended to be the common list
+        type: list
+        elements: dict
+        required: false
+        default: []
+        options:
+          pkgName:
+            description: Binary file destination name, doesn't need to match anything
+            type: str
+            required: false
+            default: "<pkgUrl_last_part>"
+          pkgVersion:
+            description: |
+              Binary file version to download
+              Mainly used to consistently track installed version (through a matrix file), as it's more simple than trying to extract it from the URL
+            type: str
+            required: true
+          pkgUrl:
+            description: Binary file download URL
+            type: str
+            required: true
+          pkgChecksum:
+            description: "Checksum to verify against the downloaded binary file. Format: <algorithm>:<checksum|url>"
+            type: str
+            required: false
+            default: null
+          pkgDestPath:
+            description: Full path to have the final binary files (after extraction, if applicable) available to
+            type: str
+            required: false
+            default: "$HOME/.local/bin/<pkgUrl_last_part>"
+          pkgArchiveFilesToExtract:
+            description: List of files to extract from downloaded archive, if applicable
+            type: list
+            elements: str
+            required: false
+            default: null
+
+      ansible_bin_binaries_packages:
+        description: |
+          List of standalone binaries that must be present on managed nodes
+          There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host
+          This one is intended to be a more specific list
+        type: list
+        elements: dict
+        required: false
+        default: []
+        options:
+          pkgName:
+            description: Binary file destination name, doesn't need to match anything
+            type: str
+            required: false
+            default: "<pkgUrl_last_part>"
+          pkgVersion:
+            description: |
+              Binary file version to download
+              Mainly used to consistently track installed version (through a matrix file), as it's more simple than trying to extract it from the URL
+            type: str
+            required: true
+          pkgUrl:
+            description: Binary file download URL
+            type: str
+            required: true
+          pkgChecksum:
+            description: "Checksum to verify against the downloaded binary file. Format: <algorithm>:<checksum|url>"
+            type: str
+            required: false
+            default: null
+          pkgDestPath:
+            description: Full path to have the final binary files (after extraction, if applicable) available to
+            type: str
+            required: false
+            default: "$HOME/.local/bin/<pkgUrl_last_part>"
+          pkgArchiveFilesToExtract:
+            description: List of files to extract from downloaded archive, if applicable
+            type: list
+            elements: str
+            required: false
+            default: null

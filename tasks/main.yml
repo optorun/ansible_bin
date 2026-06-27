@@ -92,3 +92,20 @@
   when: "'flatpak' in ansible_facts.packages"
   tags:
     - flatpak
+
+- name: Group standalone binaries related tasks
+  block:
+    - name: "[IMPORT] Import tasks \"gather_facts_subset.yml\"" # Run these tasks there (possibly again) because this task group don't run as root
+      ansible.builtin.import_tasks: gather_facts_subset.yml
+
+    - name: "[IMPORT] Import tasks \"setup_update_packages_binaries.yml\""
+      ansible.builtin.import_tasks: setup_update_packages_binaries.yml
+
+  vars:
+    ansible_become: false
+  tags:
+    - bin
+    - install
+    - bin+install
+    - update
+    - bin+update
