@@ -23,7 +23,7 @@
 
 - name: Get version of installed flatpak packages (before update)
   ansible.builtin.command:
-    cmd: flatpak list --app --columns=application,version
+    cmd: flatpak list --columns=application,version
   register: _ansible_bin_flatpak_packages_installed_before
   changed_when: false
   check_mode: false
@@ -53,7 +53,7 @@
 
 - name: Get version of installed flatpak packages (after update)
   ansible.builtin.command:
-    cmd: flatpak list --app --columns=application,version
+    cmd: flatpak list --columns=application,version
   register: _ansible_bin_flatpak_packages_installed_after
   changed_when: false
   check_mode: false
