@@ -14,10 +14,15 @@
   loop: "{{ ansible_bin_packages_versionlock_common|d([]) + ansible_bin_packages_versionlock|d([]) }}"
   changed_when: false
 
-- name: "[Debian] Update packages"
+- name: "[Debian] Update apt cache"
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
+  changed_when: false
+  check_mode: false
+
+- name: "[Debian] Update packages"
+  ansible.builtin.apt:
     name: "*"
     state: latest
   register: _ansible_bin_packages_update_output
