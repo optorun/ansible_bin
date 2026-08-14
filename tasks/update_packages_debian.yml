@@ -56,9 +56,13 @@
     - _ansible_bin_packages_update_output.changed
     - _updated_packages | length > 0
 
-- name: "[Debian] Cleanup"
+- name: "[Debian] Cleanup cache - Remove unused dependencies"
   ansible.builtin.apt:
     autoremove: true
+
+- name: "[Debian] Cleanup cache - Remove packages that can no longer be be downloaded"
+  ansible.builtin.apt:
+    autoclean: true
 
 - name: "[Debian] Unhold packages"
   ansible.builtin.dpkg_selections:
