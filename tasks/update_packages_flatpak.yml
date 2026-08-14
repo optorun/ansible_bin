@@ -21,62 +21,68 @@
       - "{{ _ansible_bin_flatpak_packages_masked.stdout_lines }}"
   when: _ansible_bin_flatpak_packages_masked.stdout_lines | length > 0
 
-- name: Get version of installed flatpak packages (before update)
-  ansible.builtin.command:
-    cmd: flatpak list --columns=application,version
-  register: _ansible_bin_flatpak_packages_installed_before
-  changed_when: false
-  check_mode: false
-  when: not ansible_check_mode
-
 - name: List available flatpak packages updates
   ansible.builtin.command:
-    cmd: flatpak remote-ls --updates --columns=application,version
+    cmd: flatpak remote-ls --updates --columns=application,commit
   register: _ansible_bin_flatpak_packages_available_updates
   changed_when: false
   check_mode: false
 
+- name: Get current commits of installed flatpak packages
+  ansible.builtin.command:
+    cmd: flatpak list --columns=application,active
+  register: _ansible_bin_flatpak_current_commits_raw
+  changed_when: false
+  check_mode: false
+  when: _ansible_bin_flatpak_packages_available_updates.stdout_lines | length > 0
+
 - name: Parse flatpak packages available updates
   ansible.builtin.set_fact:
-    _flatpak_packages_available_updates_output: >-
-      {{ _ansible_bin_flatpak_packages_available_updates.stdout_lines | map('regex_replace', '(\S+)\s+(\S+)', '\1 (\2)') | list }}
-    _flatpak_packages_available_updates_appsid: >-
-      {{ _ansible_bin_flatpak_packages_available_updates.stdout_lines | map('regex_replace', '^(\S+)\s+.*$', '\1') | list }}
+    _flatpak_updates_appids: >-
+      {{ _ansible_bin_flatpak_packages_available_updates.stdout_lines
+         | map('regex_replace', '^(\S+)\s+.*$', '\1') | list }}
+    _flatpak_updates_new_commits: >-
+      {{ _ansible_bin_flatpak_packages_available_updates.stdout_lines
+         | map('regex_replace', '^(\S+)\s+(\S+)$', '\2') | list }}
+    _flatpak_current_commits_map: >-
+      {{
+        dict(
+          _ansible_bin_flatpak_current_commits_raw.stdout_lines
+          | map('regex_replace', '^(\S+)\s+(\S+).*$', '\1 \2')
+          | map('split', ' ')
+        )
+      }}
+  when: _ansible_bin_flatpak_packages_available_updates.stdout_lines | length > 0
+
+- name: Build flatpak updates display list
+  ansible.builtin.set_fact:
+    _flatpak_updates_display: >-
+      {{
+        _flatpak_updates_appids
+        | zip(
+            _flatpak_updates_appids
+            | map('extract', _flatpak_current_commits_map)
+            | zip(_flatpak_updates_new_commits)
+            | map('join', ' -> ')
+          )
+        | map('join', ' (')
+        | map('regex_replace', '$', ')')
+        | list
+      }}
+  when: _flatpak_updates_appids|d([]) | length > 0
 
 - name: Update installed flatpak packages
   ansible.builtin.command:
-    cmd: "flatpak update --noninteractive {{ _flatpak_packages_available_updates_appsid | join(' ') }}"
+    cmd: "flatpak update --noninteractive {{ _flatpak_updates_appids | join(' ') }}"
   check_mode: false
   when:
-    - _ansible_bin_flatpak_packages_available_updates.stdout_lines | length > 0
-    -  not ansible_check_mode
-
-- name: Get version of installed flatpak packages (after update)
-  ansible.builtin.command:
-    cmd: flatpak list --columns=application,version
-  register: _ansible_bin_flatpak_packages_installed_after
-  changed_when: false
-  check_mode: false
-  when: not ansible_check_mode
-
-- name: Parse updated flatpak packages output
-  ansible.builtin.set_fact:
-    _flatpak_updated_packages_output: >-
-      {{
-        _ansible_bin_flatpak_packages_installed_after.stdout_lines
-        | difference(_ansible_bin_flatpak_packages_installed_before.stdout_lines)
-        | map('regex_replace', '^(\S+)\s+(\S+)$', '\1 (\2)')
-        | list
-      }}
-  when: not ansible_check_mode
+    - _ansible_bin_flatpak_packages_available_updates.stdout_lines | length > 0
+    - not ansible_check_mode
 
 - name: "[INFO] Print updated flatpak packages"
   ansible.builtin.debug:
-    msg: >-
-      {{ _flatpak_packages_available_updates_output if ansible_check_mode
-         else _flatpak_updated_packages_output|d()
-      }}
-  when: _flatpak_updated_packages_output|d() | length > 0 or _flatpak_packages_available_updates_output | length > 0
+    msg: "{{ _flatpak_updates_display }}"
+  when: _flatpak_updates_display|d([]) | length > 0
 
 - name: Unmask flatpak packages
   ansible.builtin.command:
