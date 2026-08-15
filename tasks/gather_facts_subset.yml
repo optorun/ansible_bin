@@ -4,6 +4,7 @@
   ansible.builtin.setup:
     filter:
       - ansible_os_family
+      - ansible_env
 
 - name: "[Debian] Ensure python3-debian is present" # Needed to detect which package manager to use on Debian, as well as for deb822_repository module
   ansible.builtin.apt:

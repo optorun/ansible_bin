@@ -21,6 +21,12 @@ ansible_bin_flatpak_custom_repositories: []
 ansible_bin_flatpak_packages_common: []
 ansible_bin_flatpak_packages: []
 
+# Standalone binaries
+ansible_bin_binaries_packages_common: []
+ansible_bin_binaries_packages: []
+ansible_bin_binaries_dir_dest_path: "~/.local/bin"
+ansible_bin_binaries_versions_track_file_path: "~/.ansible_bin_binaries_versions_track.json"
+
 # Common
 ansible_bin_packages_versionlock_common: []
 ansible_bin_packages_versionlock: []

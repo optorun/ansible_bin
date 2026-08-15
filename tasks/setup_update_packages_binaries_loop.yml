@@ -1,0 +1,144 @@
+---
+
+- name: "[{{ pkg.pkgName }}] Initialize variables"
+  ansible.builtin.set_fact:
+    _pkg_tmp_file: "/tmp/ansible_bin_{{ pkg.pkgName }}"
+    _pkg_tmp_extract_dir: "/tmp/ansible_bin_{{ pkg.pkgName }}_extract"
+    _pkg_dest_path: "{{ pkg.pkgDirDestPath | d(ansible_bin_binaries_dir_dest_path) ~ '/' ~ pkg.pkgName | expanduser }}"
+    _pkg_needs_update: "{{ _bin_versions.get(pkg.pkgName, '') != pkg.pkgVersion }}"
+
+- name: "[{{ pkg.pkgName }}] Append to report (check mode)"
+  ansible.builtin.set_fact:
+    _bin_packages_report: >-
+      {{ _bin_packages_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~  ' (would install; currently: ' ~ (_bin_versions[pkg.pkgName] | d('not installed')) ~ ')'] }}
+  when:
+    - _pkg_needs_update | bool
+    - ansible_check_mode
+
+- name: Group package install / update related tasks
+  when:
+    - _pkg_needs_update | bool
+    - not ansible_check_mode
+  block:
+    - name: "[{{ pkg.pkgName }}] Download package"
+      ansible.builtin.get_url:
+        url: "{{ pkg.pkgUrl }}"
+        dest: "{{ _pkg_tmp_file }}"
+        checksum: "{{ pkg.pkgChecksum | d(omit) }}"
+        mode: 0644
+
+    - name: "[{{ pkg.pkgName }}] Create destination directory"
+      ansible.builtin.file:
+        path: "{{ _pkg_dest_path | dirname }}"
+        state: directory
+        mode: 0755
+
+    - name: "[{{ pkg.pkgName }}] Detect file type"
+      ansible.builtin.stat:
+        path: "{{ _pkg_tmp_file }}"
+        mime: true
+      register: _pkg_stat
+
+    - name: "[{{ pkg.pkgName }}] Set type flags"
+      ansible.builtin.set_fact:
+        _pkg_is_elf: >-
+          {{ _pkg_stat.stat.mimetype in [
+            'application/x-executable',
+            'application/x-pie-executable',
+            'application/x-elf'
+          ] }}
+        _pkg_is_archive: >-
+          {{ _pkg_stat.stat.mimetype in [
+            'application/zip',
+            'application/gzip',
+            'application/x-gzip',
+            'application/x-tar',
+            'application/x-bzip2',
+            'application/x-xz',
+            'application/x-7z-compressed'
+          ] }}
+        _pkg_is_deb: >-
+          {{ _pkg_stat.stat.mimetype == 'application/vnd.debian.binary-package' }}
+
+    - name: "[{{ pkg.pkgName }}] Fail on unsupported file type"
+      ansible.builtin.fail:
+        msg: "Unsupported MIME type for {{ pkg.pkgName }}: {{ _pkg_stat.stat.mimetype }}"
+      when:
+        - not _pkg_is_elf | bool
+        - not _pkg_is_archive | bool
+        - not _pkg_is_deb | bool
+
+    - name: "[{{ pkg.pkgName }}] Install binary"
+      ansible.builtin.copy:
+        src: "{{ _pkg_tmp_file }}"
+        dest: "{{ _pkg_dest_path }}"
+        mode: 0755
+        remote_src: true
+        force: true
+      when: _pkg_is_elf | bool
+
+    - name: Group archive install / update related tasks
+      when: _pkg_is_archive | bool
+      block:
+        - name: "[{{ pkg.pkgName }}] Create temp extraction directory"
+          ansible.builtin.file:
+            path: "{{ _pkg_tmp_extract_dir }}"
+            state: directory
+            mode: 0755
+
+        - name: "[{{ pkg.pkgName }}] Extract archive"
+          ansible.builtin.unarchive:
+            src: "{{ _pkg_tmp_file }}"
+            dest: "{{ _pkg_tmp_extract_dir }}"
+            remote_src: true
+
+        - name: "[{{ pkg.pkgName }}] Copy files from archive"
+          ansible.posix.synchronize:
+            src: "{{ _pkg_tmp_extract_dir }}/{{ item }}"
+            dest: "{{ _pkg_dest_path | dirname }}/"
+            recursive: true
+            delete: false
+          delegate_to: "{{ inventory_hostname }}"
+          loop: "{{ pkg.pkgArchiveFilesToExtract | d([]) or ['.'] }}"
+
+    - name: "[{{ pkg.pkgName }}] Install .deb package"
+      ansible.builtin.apt:
+        deb: "{{ _pkg_tmp_file }}"
+      become: true
+      when: _pkg_is_deb | bool
+
+    - name: "[{{ pkg.pkgName }}] Determine install success"
+      ansible.builtin.set_fact:
+        _pkg_install_success: >-
+          {{ (_pkg_is_elf | bool) or (_pkg_is_deb | bool) or (_pkg_is_archive | bool) }}
+
+    - name: "[{{ pkg.pkgName }}] Update version matrix on disk"
+      ansible.builtin.copy:
+        content: "{{ (_bin_versions | combine({pkg.pkgName: pkg.pkgVersion})) | to_nice_json }}"
+        dest: "{{ ansible_bin_binaries_versions_track_file_path | expanduser }}"
+        mode: 0644
+
+    - name: "[{{ pkg.pkgName }}] Update version matrix in memory"
+      ansible.builtin.set_fact:
+        _bin_versions: "{{ _bin_versions | combine({pkg.pkgName: pkg.pkgVersion}) }}"
+
+    - name: "[{{ pkg.pkgName }}] Append to report"
+      ansible.builtin.set_fact:
+        _bin_packages_report: >-
+          {{ _bin_packages_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~ ' (SUCCESS)'] }}
+
+  rescue:
+    - name: "[{{ pkg.pkgName }}] Append failures to report"
+      ansible.builtin.set_fact:
+        _bin_packages_report: >-
+          {{ _bin_packages_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~ ' (FAILED)'] }}
+        _bin_had_failures: true
+
+  always:
+    - name: "[{{ pkg.pkgName }}] Cleanup temp files"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _pkg_tmp_file }}"
+        - "{{ _pkg_tmp_extract_dir }}"

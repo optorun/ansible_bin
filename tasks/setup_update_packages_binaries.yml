@@ -1,0 +1,40 @@
+---
+
+- name: Ensure version matrix directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_bin_binaries_versions_track_file_path | dirname | expanduser }}"
+    state: directory
+
+- name: Read versions tracking file
+  ansible.builtin.slurp:
+    src: "{{ ansible_bin_binaries_versions_track_file_path | expanduser }}"
+  register: _bin_versions_raw
+  failed_when: false
+
+- name: Parse versions matrix
+  ansible.builtin.set_fact:
+    _bin_versions: "{{ _bin_versions_raw.content | b64decode | from_json | d({}) }}"
+
+- name: Initialize variables
+  ansible.builtin.set_fact:
+    _bin_packages_report: []
+    _bin_had_failures: false
+
+- name: "[INCLUDE] Include tasks \"setup_update_packages_binaries_loop.yml\""
+  ansible.builtin.include_tasks: setup_update_packages_binaries_loop.yml
+  loop: "{{ ansible_bin_binaries_packages_common|d([]) + ansible_bin_binaries_packages|d([]) }}"
+  loop_control:
+    loop_var: pkg
+    label: "{{ pkg.pkgName }}"
+
+- name: "[INFO] Print installed / updated package"
+  ansible.builtin.debug:
+    msg: "{{ _bin_packages_report }}"
+  when:
+    - _bin_packages_report | length > 0
+    - not _bin_had_failures | bool
+
+- name: "[ERR] Print installed / updated packages (with failures)"
+  ansible.builtin.fail:
+    msg: "{{ _bin_packages_report }}"
+  when: _bin_had_failures | bool

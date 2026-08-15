@@ -19,9 +19,11 @@ Manage binaries and scripts install, update, download, ...
 
 Setup custom APT repositories (Debian systems only)
 
-Install base packages list (Debian and RHEL-based systems)
+Install base packages list (Debian / RHEL-based systems and flatpak)
 
-Provides tasks to upgrade packages on manages systems, supporting an exclusion list (Debian and RHEL-based systems)
+Provides tasks to upgrade packages on manages systems, supporting an exclusion list (Debian / RHEL-based systems and flatpak)
+
+Downloads standalone binaries (ready to go, archived or .deb files) and install them locally
 
 |Option|Description|Type|Required|Default|
 |---|---|---|---|---|
@@ -38,6 +40,10 @@ Provides tasks to upgrade packages on manages systems, supporting an exclusion l
 | ansible_bin_flatpak_custom_repositories | List of custom flatpak remotes that must be present on managed nodes There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be a more specific list | list of dicts of 'ansible_bin_flatpak_custom_repositories' options | no | [] |
 | ansible_bin_flatpak_packages_common | List of flatpak packages that must be present on managed nodes There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be the common list | list of dicts of 'ansible_bin_flatpak_packages_common' options | no | [] |
 | ansible_bin_flatpak_packages | List of flatpak packages that must be present on managed nodes There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be a more specific list | list of dicts of 'ansible_bin_flatpak_packages' options | no | [] |
+| ansible_bin_binaries_packages_common | List of binaries to download and install on managed nodes. These could be standalone files downloaded as-is, archives to extract files from, or .deb files to install There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be the common list | list of dicts of 'ansible_bin_binaries_packages_common' options | no | [] |
+| ansible_bin_binaries_packages | List of binaries to download and install on managed nodes. These could be standalone files downloaded as-is, archives to extract files from, or .deb files to install There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be a more specific list | list of dicts of 'ansible_bin_binaries_packages' options | no | [] |
+| ansible_bin_binaries_dir_dest_path | Destination directory path to copy the binary files to (after extraction, if applicable) Global value; could be overriden by ansible_bin_binaries_packages.pkgDirDestPath (or the common counterpart) | str | no | ~/.local/bin |
+| ansible_bin_binaries_versions_track_file_path | Versions matrix file path (json format) Used to track installed binnary packages versions to compare to desired versions set in ansible_bin_binaries_packages.pkgVersion (or the common counterpart) Content excerpt: ```json {     "helm": "v3.21.2",     "kubectl": "v1.36.2",     "kubelogin": "v1.36.2",     "terragrunt": "v1.0.8" } ``` | str | no | ~/.ansible_bin_binaries_versions_track.json |
 
 #### Options for main > ansible_bin_apt_custom_repositories_common
 
@@ -94,6 +100,28 @@ Provides tasks to upgrade packages on manages systems, supporting an exclusion l
 |---|---|---|---|---|
 | pkgId | Flatpak package ID | str | yes |  |
 | pkgInstallMethod | Whether package is installed globally (system) or only for the current user | str | no | user |
+
+#### Options for main > ansible_bin_binaries_packages_common
+
+|Option|Description|Type|Required|Default|
+|---|---|---|---|---|
+| pkgName | Binary file name at the destination, except for archives content to extract, whose name stays unchanged. Doesn't need to match anything | str | yes |  |
+| pkgVersion | Binary file version to download Mainly used to consistently track installed version (through a matrix file), as it's more reliable than trying to extract it from the URL | str | yes |  |
+| pkgUrl | Binary file download URL | str | yes |  |
+| pkgChecksum | Checksum to verify against the downloaded binary file. Format: <algorithm>:<checksum|url> | str | no | None |
+| pkgDirDestPath | Destination directory path to copy the binary file to (after extraction, if applicable). Ignored for .deb files Overrides {{ ansible_bin_binaries_dir_dest_path }} for a specific item | str | no | {{ ansible_bin_binaries_dir_dest_path }} |
+| pkgArchiveFilesToExtract | List of files to extract from a downloaded archive, if applicable If unset or left empty, all files from the archive will be extracted | list of 'str' | no | None |
+
+#### Options for main > ansible_bin_binaries_packages
+
+|Option|Description|Type|Required|Default|
+|---|---|---|---|---|
+| pkgName | Binary file name at the destination, except for archives content to extract, whose name stays unchanged. Doesn't need to match anything | str | yes |  |
+| pkgVersion | Binary file version to download Mainly used to consistently track installed version (through a matrix file), as it's more reliable than trying to extract it from the URL | str | yes |  |
+| pkgUrl | Binary file download URL | str | yes |  |
+| pkgChecksum | Checksum to verify against the downloaded binary file. Format: <algorithm>:<checksum|url> | str | no | None |
+| pkgDirDestPath | Destination directory path to copy the binary file to (after extraction, if applicable). Ignored for .deb files Overrides {{ ansible_bin_binaries_dir_dest_path }} for a specific item | str | no | {{ ansible_bin_binaries_dir_dest_path }} |
+| pkgArchiveFilesToExtract | List of files to extract from a downloaded archive, if applicable If unset or left empty, all files from the archive will be extracted | list of 'str' | no | None |
 
 #### Choices for main > ansible_bin_apt_custom_repositories_common > repoTypes
 
