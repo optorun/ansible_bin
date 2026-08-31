@@ -79,10 +79,11 @@
     - _ansible_bin_flatpak_packages_available_updates.stdout_lines | length > 0
     - not ansible_check_mode
 
-- name: "[INFO] Print updated flatpak packages"
-  ansible.builtin.debug:
-    msg: "{{ _flatpak_updates_display }}"
-  when: _flatpak_updates_display|d([]) | length > 0
+- name: Append flatpak packages updates to tasks report
+  ansible.builtin.set_fact:
+    _tasks_report: >-
+      {{ _tasks_report + _flatpak_updates_display | map('regex_replace', '^(.*)$', '[flatpak] \1') | list }}
+  when: _flatpak_updates_display | d([]) | length > 0
 
 - name: Unmask flatpak packages
   ansible.builtin.command:

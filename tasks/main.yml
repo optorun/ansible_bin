@@ -15,6 +15,26 @@
     - flatpak+install
     - flatpak+update
 
+- name: Initialize variables for tasks report
+  ansible.builtin.set_fact:
+    _tasks_report: []
+    _tasks_report_had_failures: false
+  tags:
+    - apt
+    - dnf
+    - bin
+    - flatpak
+    - install
+    - update
+    - apt+install
+    - dnf+install
+    - apt+update
+    - dnf+update
+    - flatpak+install
+    - flatpak+update
+    - bin+install
+    - bin+update
+
 - name: Group system packages related tasks
   block:
     - name: "[INCLUDE] Include tasks \"setup_custom_repositories_<linux_distribution>.yml\""
@@ -108,4 +128,34 @@
     - install
     - bin+install
     - update
+    - bin+update
+
+- name: Group report related tasks
+  block:
+    - name: "[INFO] Print tasks report"
+      ansible.builtin.debug:
+        msg: "{{ _tasks_report }}"
+      when:
+        - _tasks_report | length > 0
+        - not _tasks_report_had_failures | bool
+
+    - name: "[ERR] Print tasks report (with failures)"
+      ansible.builtin.fail:
+        msg: "{{ _tasks_report }}"
+      when: _tasks_report_had_failures | bool
+
+  tags:
+    - apt
+    - dnf
+    - bin
+    - flatpak
+    - install
+    - update
+    - apt+install
+    - dnf+install
+    - apt+update
+    - dnf+update
+    - flatpak+install
+    - flatpak+update
+    - bin+install
     - bin+update

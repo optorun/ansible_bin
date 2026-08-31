@@ -51,9 +51,10 @@
       }}
   when: not ansible_check_mode
 
-- name: "[INFO] [Debian] Print updated packages"
-  ansible.builtin.debug:
-    msg: "{{ _updated_packages }}"
+- name: Append apt packages updates to tasks report
+  ansible.builtin.set_fact:
+    _tasks_report: >-
+      {{ _tasks_report + _updated_packages | map('regex_replace', '^(.*)$', '[apt] \1') | list }}
   when:
     - _ansible_bin_packages_update_output.changed
     - _updated_packages | length > 0

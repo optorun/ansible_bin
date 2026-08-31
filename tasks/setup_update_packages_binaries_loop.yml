@@ -7,10 +7,10 @@
     _pkg_dest_path: "{{ pkg.pkgDirDestPath | d(ansible_bin_binaries_dir_dest_path) ~ '/' ~ pkg.pkgName | expanduser }}"
     _pkg_needs_update: "{{ _bin_versions.get(pkg.pkgName, '') != pkg.pkgVersion }}"
 
-- name: "[{{ pkg.pkgName }}] Append to report (check mode)"
+- name: "[{{ pkg.pkgName }}] Append to tasks report (check mode)"
   ansible.builtin.set_fact:
-    _bin_packages_report: >-
-      {{ _bin_packages_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~  ' (would install; currently: ' ~ (_bin_versions[pkg.pkgName] | d('not installed')) ~ ')'] }}
+    _tasks_report: >-
+      {{ _tasks_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~  ' (would install; currently: ' ~ (_bin_versions[pkg.pkgName] | d('not installed')) ~ ')'] }}
   when:
     - _pkg_needs_update | bool
     - ansible_check_mode
@@ -124,17 +124,17 @@
       ansible.builtin.set_fact:
         _bin_versions: "{{ _bin_versions | combine({pkg.pkgName: pkg.pkgVersion}) }}"
 
-    - name: "[{{ pkg.pkgName }}] Append to report"
+    - name: "[{{ pkg.pkgName }}] Append to tasks report"
       ansible.builtin.set_fact:
-        _bin_packages_report: >-
-          {{ _bin_packages_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~ ' (SUCCESS)'] }}
+        _tasks_report: >-
+          {{ _tasks_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~ ' (SUCCESS)'] }}
 
   rescue:
-    - name: "[{{ pkg.pkgName }}] Append failures to report"
+    - name: "[{{ pkg.pkgName }}] Append failures to tasks report"
       ansible.builtin.set_fact:
-        _bin_packages_report: >-
-          {{ _bin_packages_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~ ' (FAILED)'] }}
-        _bin_had_failures: true
+        _tasks_report: >-
+          {{ _tasks_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~ ' (FAILED)'] }}
+        _tasks_report_had_failures: true
 
   always:
     - name: "[{{ pkg.pkgName }}] Cleanup temp files"

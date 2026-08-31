@@ -15,26 +15,9 @@
   ansible.builtin.set_fact:
     _bin_versions: "{{ _bin_versions_raw.content | b64decode | from_json | d({}) }}"
 
-- name: Initialize variables
-  ansible.builtin.set_fact:
-    _bin_packages_report: []
-    _bin_had_failures: false
-
 - name: "[INCLUDE] Include tasks \"setup_update_packages_binaries_loop.yml\""
   ansible.builtin.include_tasks: setup_update_packages_binaries_loop.yml
   loop: "{{ ansible_bin_binaries_packages_common|d([]) + ansible_bin_binaries_packages|d([]) }}"
   loop_control:
     loop_var: pkg
     label: "{{ pkg.pkgName }}"
-
-- name: "[INFO] Print installed / updated package"
-  ansible.builtin.debug:
-    msg: "{{ _bin_packages_report }}"
-  when:
-    - _bin_packages_report | length > 0
-    - not _bin_had_failures | bool
-
-- name: "[ERR] Print installed / updated packages (with failures)"
-  ansible.builtin.fail:
-    msg: "{{ _bin_packages_report }}"
-  when: _bin_had_failures | bool
