@@ -45,7 +45,9 @@
           {{ _pkg_stat.stat.mimetype in [
             'application/x-executable',
             'application/x-pie-executable',
-            'application/x-elf'
+            'application/x-elf',
+            'text/x-perl',
+            'text/plain'
           ] }}
         _pkg_is_archive: >-
           {{ _pkg_stat.stat.mimetype in [
