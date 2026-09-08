@@ -34,6 +34,7 @@
         _ansible_bin_packages_update_output.stdout_lines|d()
         | select('match', '^Inst ')
         | map('regex_replace', '^Inst (\S+) \[([^\]]+)\] \((\S+).*', '\1: \2 -> \3')
+        | map('regex_replace', '^Inst (\S+) \((\S+).*', '\1: (new) \2')
         | list
       }}
   when: ansible_check_mode
@@ -45,6 +46,7 @@
         _ansible_bin_packages_update_output.stdout_lines|d()
         | select('match', '^Unpacking ')
         | map('regex_replace', '^Unpacking (\S+) \(([^)]+)\) over \(([^)]+)\).*', '\1: \3 -> \2')
+        | map('regex_replace', '^Unpacking (\S+) \(([^)]+).*', '\1: (new) \2')
         | list
       }}
   when: not ansible_check_mode
