@@ -7,6 +7,8 @@ ansible_bin_apt_custom_repositories: []
 ansible_bin_apt_packages_common: []
 ansible_bin_apt_packages: []
 
+ansible_bin_apt_packages_upgrade: "full"
+
 # DNF
 ansible_bin_dnf_packages_common: []
 ansible_bin_dnf_packages: []

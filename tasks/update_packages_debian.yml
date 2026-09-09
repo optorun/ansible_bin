@@ -23,8 +23,8 @@
 
 - name: "[Debian] Update packages"
   ansible.builtin.apt:
-    name: "*"
     state: latest
+    upgrade: "{{ ansible_bin_apt_packages_upgrade|d('full') }}"
   register: _ansible_bin_packages_update_output
 
 - name: "[Debian] Parse updated packages (check mode)"

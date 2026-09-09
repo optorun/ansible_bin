@@ -164,6 +164,21 @@ argument_specs:
         required: false
         default: []
 
+      ansible_bin_apt_packages_upgrade:
+        description: |
+          Type of upgrade to perform
+          "no" will run a regular upgrade, "yes" / "safe" a safe-upgrade, and "dist" / "full" a full-upgrade
+          See https://docs.ansible.com/projects/ansible/latest/collections/ansible/builtin/apt_module.html#parameter-upgrade
+        type: str
+        choices:
+          - "no"
+          - "yes"
+          - "safe"
+          - "dist"
+          - "full"
+        required: false
+        default: "full"
+
       ansible_bin_packages_versionlock_common:
         description: |
           List of packages to exclude from update tasks

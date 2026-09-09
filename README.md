@@ -33,6 +33,7 @@ Downloads standalone binaries (ready to go, archived or .deb files) and install 
 | ansible_bin_dnf_packages | List of rpm packages (installed through dnf) that must be present on managed nodes There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be a more specific list | list of 'str' | no | [] |
 | ansible_bin_apt_packages_common | List of dpkg packages (installed through apt) that must be present on managed nodes There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be the common list | list of 'str' | no | [] |
 | ansible_bin_apt_packages | List of dpkg packages (installed through apt) that must be present on managed nodes There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be a more specific list | list of 'str' | no | [] |
+| ansible_bin_apt_packages_upgrade | Type of upgrade to perform "no" will run a regular upgrade, "yes" / "safe" a safe-upgrade, and "dist" / "full" a full-upgrade See https://docs.ansible.com/projects/ansible/latest/collections/ansible/builtin/apt_module.html#parameter-upgrade | str | no | full |
 | ansible_bin_packages_versionlock_common | List of packages to exclude from update tasks There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be the common list | list of 'str' | no | [] |
 | ansible_bin_packages_versionlock | List of packages to exclude from update tasks There are two lists available, which are merged on run. Useful for instance to have one common in group_vars and another specific for each host This one is intended to be a more specific list | list of 'str' | no | [] |
 | ansible_bin_autoreboot | Whether to automatically reboot systems after updates, if required | bool | no | False |
@@ -136,6 +137,16 @@ Downloads standalone binaries (ready to go, archived or .deb files) and install 
 |---|
 | deb |
 | deb-src |
+
+#### Choices for main > ansible_bin_apt_packages_upgrade
+
+|Choice|
+|---|
+| no |
+| yes |
+| safe |
+| dist |
+| full |
 
 
 
