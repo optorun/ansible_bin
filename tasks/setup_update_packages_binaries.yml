@@ -1,23 +1,86 @@
 ---
 
-- name: Ensure version matrix directory exists
-  ansible.builtin.file:
-    path: "{{ ansible_bin_binaries_versions_track_file_path | dirname | expanduser }}"
-    state: directory
-
-- name: Read versions tracking file
+- name: Read version tracking file if it exists
   ansible.builtin.slurp:
     src: "{{ ansible_bin_binaries_versions_track_file_path | expanduser }}"
-  register: _bin_versions_raw
+  register: _pkg_track_file_encoded
   failed_when: false
 
-- name: Parse versions matrix
+- name: Initialize or parse tracking file safely into a native dictionary
   ansible.builtin.set_fact:
-    _bin_versions: "{{ _bin_versions_raw.content | b64decode | from_json | d({}) }}"
+    _bin_versions: "{{ (_pkg_track_file_encoded.content | b64decode | from_json) if ('content' in _pkg_track_file_encoded) else {} }}"
 
-- name: "[INCLUDE] Include tasks \"setup_update_packages_binaries_loop.yml\""
+- name: Scan package destination directories for actual files on disk
+  ansible.builtin.find:
+    paths: "{{ pkg.pkgDirDestPath | d(ansible_bin_binaries_dir_dest_path) | expanduser }}"
+    recurse: true
+    file_type: any
+  loop: "{{ ansible_bin_binaries_packages_common | d([]) + ansible_bin_binaries_packages | d([]) }}"
+  loop_control:
+    loop_var: pkg
+    label: "{{ pkg.pkgName }}"
+  register: _pkg_disk_scans
+  # Skip packages that aren't in the tracking file or are DEB packages
+  when:
+    - "_bin_versions[pkg.pkgName] is defined"
+    - "_bin_versions[pkg.pkgName].files is defined"
+  check_mode: false
+
+- name: Initialize missing binaries tracker list
+  ansible.builtin.set_fact:
+    _missing_bin_names: []
+
+- name: Identify packages with missing files by comparing disk scans to tracking data
+  ansible.builtin.set_fact:
+    _missing_bin_names: >-
+      {{
+        _missing_bin_names | d([]) + [ item.pkg.pkgName ]
+      }}
+  loop: "{{ _pkg_disk_scans.results }}"
+  loop_control:
+    label: "{{ item.pkg.pkgName }}"
+  vars:
+    _expected_files: "{{ _bin_versions[item.pkg.pkgName].files | d([]) }}"
+    _actual_files: "{{ item.files | map(attribute='path') | list }}"
+  # If there is ANY "difference" between what we expect and what is actually there, flag it!
+  when:
+    - not item.get('skipped', false)
+    - (_expected_files | difference(_actual_files)) | length > 0
+
+- name: Track missing deb packages for deletion from tracking index
+  ansible.builtin.set_fact:
+    _missing_deb_names: >-
+      {{
+        _bin_versions | d({}) | dict2items
+        | selectattr('value.dpkg_name', 'defined')
+
+        | rejectattr('value.dpkg_name', 'in', ansible_facts.packages.keys() | d([]))
+        | map(attribute='key')
+        | list
+      }}
+
+- name: Purge broken state trackers out of memory matrix
+  ansible.builtin.set_fact:
+    _bin_versions: "{{ _bin_versions | dict2items | rejectattr('key', 'in', (_missing_bin_names + _missing_deb_names)) | items2dict }}"
+  when: "(_missing_bin_names | length > 0) or (_missing_deb_names | length > 0)"
+
+- name: Sync updated version tracking file back to disk
+  ansible.builtin.copy:
+    content: "{{ _bin_versions | to_nice_json }}"
+    dest: "{{ ansible_bin_binaries_versions_track_file_path | expanduser }}"
+    mode: 0644
+  when:
+    - "(_missing_bin_names | length > 0) or (_missing_deb_names | length > 0)"
+    - not ansible_check_mode
+
+- name: Initialize empty execution task report array
+  ansible.builtin.set_fact:
+    _tasks_report: []
+    _tasks_report_had_failures: false
+
+- name: "[INCLUDE] Include tasks \"setup_update_packages_binaries_loop.yml\""
   ansible.builtin.include_tasks: setup_update_packages_binaries_loop.yml
-  loop: "{{ ansible_bin_binaries_packages_common|d([]) + ansible_bin_binaries_packages|d([]) }}"
+  loop: "{{ ansible_bin_binaries_packages_common | d([]) + ansible_bin_binaries_packages | d([]) }}"
   loop_control:
     loop_var: pkg
     label: "{{ pkg.pkgName }}"

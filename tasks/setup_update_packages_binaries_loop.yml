@@ -1,16 +1,16 @@
 ---
-
 - name: "[{{ pkg.pkgName }}] Initialize variables"
   ansible.builtin.set_fact:
     _pkg_tmp_file: "/tmp/ansible_bin_{{ pkg.pkgName }}"
     _pkg_tmp_extract_dir: "/tmp/ansible_bin_{{ pkg.pkgName }}_extract"
-    _pkg_dest_path: "{{ pkg.pkgDirDestPath | d(ansible_bin_binaries_dir_dest_path) ~ '/' ~ pkg.pkgName | expanduser }}"
-    _pkg_needs_update: "{{ _bin_versions.get(pkg.pkgName, '') != pkg.pkgVersion }}"
+    _pkg_dest_dir: "{{ pkg.pkgDirDestPath | d(ansible_bin_binaries_dir_dest_path) | expanduser }}"
+    _pkg_dest_path: "{{ (pkg.pkgDirDestPath | d(ansible_bin_binaries_dir_dest_path) ~ '/' ~ pkg.pkgName) | expanduser }}"
+    _pkg_needs_update: "{{ (_bin_versions[pkg.pkgName].version | d('')) != pkg.pkgVersion }}"
 
 - name: "[{{ pkg.pkgName }}] Append to tasks report (check mode)"
   ansible.builtin.set_fact:
     _tasks_report: >-
-      {{ _tasks_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~  ' (would install; currently: ' ~ (_bin_versions[pkg.pkgName] | d('not installed')) ~ ')'] }}
+      {{ _tasks_report + [pkg.pkgName ~ ': ' ~ pkg.pkgVersion ~  ' (would install; currently: ' ~ (_bin_versions[pkg.pkgName].version | d('not installed')) ~ ')'] }}
   when:
     - _pkg_needs_update | bool
     - ansible_check_mode
@@ -29,7 +29,7 @@
 
     - name: "[{{ pkg.pkgName }}] Create destination directory"
       ansible.builtin.file:
-        path: "{{ _pkg_dest_path | dirname }}"
+        path: "{{ _pkg_dest_dir }}"
         state: directory
         mode: 0755
 
@@ -70,15 +70,24 @@
         - not _pkg_is_archive | bool
         - not _pkg_is_deb | bool
 
-    - name: "[{{ pkg.pkgName }}] Install binary"
-      ansible.builtin.copy:
-        src: "{{ _pkg_tmp_file }}"
-        dest: "{{ _pkg_dest_path }}"
-        mode: 0755
-        remote_src: true
-        force: true
+    # --- TYPE 1: SIMPLE BINARIES ---
+    - name: Group simple binary install / update related tasks
       when: _pkg_is_elf | bool
+      block:
+        - name: "[{{ pkg.pkgName }}] Install binary"
+          ansible.builtin.copy:
+            src: "{{ _pkg_tmp_file }}"
+            dest: "{{ _pkg_dest_path }}"
+            mode: 0755
+            remote_src: true
+            force: true
 
+        - name: "[{{ pkg.pkgName }}] Collect installed metrics (ELF)"
+          ansible.builtin.set_fact:
+            _pkg_meta_update:
+              files: ["{{ _pkg_dest_path }}"]
+
+    # --- TYPE 2: ARCHIVES (TARGETED & DYNAMIC) ---
     - name: Group archive install / update related tasks
       when: _pkg_is_archive | bool
       block:
@@ -97,32 +106,71 @@
         - name: "[{{ pkg.pkgName }}] Copy files from archive"
           ansible.posix.synchronize:
             src: "{{ _pkg_tmp_extract_dir }}/{{ item }}"
-            dest: "{{ _pkg_dest_path | dirname }}/"
+            dest: "{{ _pkg_dest_dir }}/"
             recursive: true
             delete: false
           delegate_to: "{{ inventory_hostname }}"
           loop: "{{ pkg.pkgArchiveFilesToExtract | d([]) or ['.'] }}"
 
-    - name: "[{{ pkg.pkgName }}] Install .deb package"
-      ansible.builtin.apt:
-        deb: "{{ _pkg_tmp_file }}"
-      become: true
+        - name: "[{{ pkg.pkgName }}] Find all extracted files (For implicit/dynamic archives)"
+          ansible.builtin.find:
+            paths: "{{ _pkg_tmp_extract_dir }}"
+            recurse: true
+            file_type: any
+          register: _pkg_found_files
+          when: "pkg.pkgArchiveFilesToExtract | d([]) | length == 0"
+
+        - name: "[{{ pkg.pkgName }}] Collect installed metrics (Archive)"
+          ansible.builtin.set_fact:
+            _pkg_meta_update:
+              files: >-
+                {{
+                  (pkg.pkgArchiveFilesToExtract | d([]) | length > 0) | ternary(
+                    pkg.pkgArchiveFilesToExtract | map('regex_replace', '^', _pkg_dest_dir ~ '/'),
+                    _pkg_found_files.files | map(attribute='path') | map('relpath', _pkg_tmp_extract_dir) | map('regex_replace', '^', _pkg_dest_dir ~ '/')
+                  ) | list
+                }}
+
+    # --- TYPE 3: DEB PACKAGES ---
+    - name: Group deb install / update related tasks
       when: _pkg_is_deb | bool
+      block:
+        - name: "[{{ pkg.pkgName }}] Extract true package name from .deb metadata"
+          ansible.builtin.command: "dpkg-deb -f {{ _pkg_tmp_file }} Package"
+          register: _pkg_deb_true_name
+          changed_when: false
 
-    - name: "[{{ pkg.pkgName }}] Determine install success"
-      ansible.builtin.set_fact:
-        _pkg_install_success: >-
-          {{ (_pkg_is_elf | bool) or (_pkg_is_deb | bool) or (_pkg_is_archive | bool) }}
+        - name: "[{{ pkg.pkgName }}] Install .deb package"
+          ansible.builtin.apt:
+            deb: "{{ _pkg_tmp_file }}"
+          become: true
 
-    - name: "[{{ pkg.pkgName }}] Update version matrix on disk"
-      ansible.builtin.copy:
-        content: "{{ (_bin_versions | combine({pkg.pkgName: pkg.pkgVersion})) | to_nice_json }}"
-        dest: "{{ ansible_bin_binaries_versions_track_file_path | expanduser }}"
-        mode: 0644
+        - name: "[{{ pkg.pkgName }}] Collect installed metrics (deb)"
+          ansible.builtin.set_fact:
+            _pkg_meta_update:
+              dpkg_name: "{{ _pkg_deb_true_name.stdout | trim }}"
 
-    - name: "[{{ pkg.pkgName }}] Update version matrix in memory"
-      ansible.builtin.set_fact:
-        _bin_versions: "{{ _bin_versions | combine({pkg.pkgName: pkg.pkgVersion}) }}"
+    # --- TRACKING FILE PERSISTENCE ---
+    - name: Group version matrix update related tasks
+      block:
+        - name: "[{{ pkg.pkgName }}] Build package metadata"
+          ansible.builtin.set_fact:
+            _pkg_combined_payload: >-
+              {{
+                _bin_versions | combine({
+                  pkg.pkgName: ({ 'version': pkg.pkgVersion } | combine(_pkg_meta_update))
+                })
+              }}
+
+        - name: "[{{ pkg.pkgName }}] Update version matrix on disk"
+          ansible.builtin.copy:
+            content: "{{ _pkg_combined_payload | to_nice_json }}"
+            dest: "{{ ansible_bin_binaries_versions_track_file_path | expanduser }}"
+            mode: 0644
+
+        - name: "[{{ pkg.pkgName }}] Update version matrix in memory"
+          ansible.builtin.set_fact:
+            _bin_versions: "{{ _pkg_combined_payload }}"
 
     - name: "[{{ pkg.pkgName }}] Append to tasks report"
       ansible.builtin.set_fact:
